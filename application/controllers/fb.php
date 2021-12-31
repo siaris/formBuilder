@@ -245,17 +245,6 @@ class Fb extends Medical_record_controller {
 		}
 	}
 	
-	//halaman search latest emr form
-	public function latest(){
-		
-		return;
-	}
-	
-	//halaman
-	public function look(){
-		//arg
-	}
-	
 	//halaman save
 	public function save(){
 		// $this->output->enable_profiler(TRUE);
