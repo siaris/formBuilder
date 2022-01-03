@@ -464,34 +464,6 @@ class Fb extends Medical_record_controller {
 		$this->form_validation->set_rules('title', 'Title', 'trim|alpha_numeric_spaces');
 		echo $this->save_mr_doc($id);
 	}
-
-	//halaman
-	function save_notes(){ //var_dump($_POST);
-		$this->defPath = '/supports/pasien/00/';
-		if($this->input->post()){
-			$this->load->model('medical_record/mrnotesmodel');
-			$s = $this->input->post();
-			// var_dump($s);
-			// var_dump($_FILES);exit;
-			$P = '';
-			if(isset($_FILES['file'])){
-				$config['upload_path']   = ROOTPATH.$this->defPath;
-				$config['allowed_types'] = 'jpeg|jpg|png|gif|pdf';
-				$config['encrypt_name']	 = true;
-				$this->load->library('upload',$config);
-				
-				if($this->upload->do_upload('file')){
-					$d = $this->upload->data();
-					$P = $this->defPath.$d['file_name'];
-				}
-			}
-			
-			$d = ['detail_reg'=>$s['dR'],'Tx'=>$s['t'],'D'=>date('Y-m-d H:i:s'),'Uid'=>$this->session->userdata['userLogin']['id'],'O'=>['st'=>'c'],'PImg'=>$P];
-			$this->mrnotesmodel->saveNotesMedis($d);
-			echo json_encode(['success'=>true]);
-		}
-		return;
-	}
 	
 	private function dummyNotes(){
 		return [['notes_json'=>json_encode(['notesmedis'=>[["Tx"=> "D1",
@@ -502,126 +474,6 @@ class Fb extends Medical_record_controller {
 		]])
 		]];
 	}
-
-	//halaman
-	function show_all_notes($rm,$isRm = '1'){
-		$this->load->model(['medical_record/mrnotesmodel','usermodel']);
-		if($isRm == '1')
-			$N = $this->mrnotesmodel->db->query('select mr_notes.*,poli_kunjungan_pasien.tanggal from mr_notes inner join poli_kunjungan_pasien on id=detail_reg inner join pendaftaran using(no_reg) where notes_json like \'%"notesmedis":%\' and no_rm = '.$rm)->result_array();
-		else{
-			if($rm != '0')
-				$N = $this->mrnotesmodel->db->query('select mr_notes.*,poli_kunjungan_pasien.tanggal from mr_notes inner join poli_kunjungan_pasien on id=detail_reg inner join pendaftaran using(no_reg) where notes_json like \'%"notesmedis":%\' and no_rm = (select no_rm from poli_kunjungan_pasien inner join pendaftaran using(no_reg) where id = '.$rm.')')->result_array();
-			else
-				$N = $this->dummyNotes();
-		}
-		$res = [];$k = 'notesmedis'; 
-		if(!empty($N)){
-			$U = _parseDropdown($this->usermodel->findAll(), $field_value='name', $field_key='id','awal-kosong');
-			foreach($N as $n){
-				$tempAttr['dt_n'] = $n['detail_reg'];
-				$tempAttr['tgl_n'] = $n['tanggal'];
-				$rd = json_decode($n['notes_json'],true);	
-				if(!empty($rd[$k])){
-					array_walk($rd[$k],function($vl,$ky) use(&$res,&$U,&$tempAttr){
-						$vl['Un'] = $U[$vl['Uid']];
-						$vl['dt_reg_n'] = $tempAttr['dt_n'];
-						$vl['tanggal'] = $tempAttr['tgl_n'];
-						$res[] = $vl;
-						// $res[$ky]['Un'] = $U[$vl['Uid']]; 
-					});	
-				}	
-			}
-		}
-		if($this->kirim_nilai_balik == 'json'){
-			echo json_encode(['success'=>true,'result'=>$res]);
-			return;
-		}else{
-			return $res;
-		}
-	}
-
-	//halaman
-	function show_notes($k,$v){
-		$this->load->model(['medical_record/mrnotesmodel','usermodel']);
-		$r = $this->mrnotesmodel->queryOne('detail_reg = '.$v,'notes_json',null);
-		$rd = (!empty($r))?json_decode($r,true):[];
-		$res = [];
-		if(!empty($rd) && isset($rd[$k])){
-			$U = _parseDropdown($this->usermodel->findAll(), $field_value='name', $field_key='id','awal-kosong');
-			array_walk($rd[$k],function($vl,$ky) use(&$res,&$U){
-				$res[$ky] = $vl;
-				$res[$ky]['Un'] = $U[$vl['Uid']]; 
-			});
-		}
-		echo json_encode(['success'=>true,'result'=>$res]);
-		return;
-	}
-
-
-	public function upload_image(){
-		$config['upload_path']   = './assets/upload/emr/';
-	    $config['allowed_types'] = 'jpeg|jpg|png|gif';
-	    $config['encrypt_name']	 = true;
-	    $this->load->library('upload',$config);
-	    if ( ! $this->upload->do_upload('userfile'))
-        {
-            $error = array('error' => $this->upload->display_errors());
-            print_r($error);
-        }
-        else
-        {
-            $data=$this->upload->data();
-            echo '{"nm_file":"'.site_url('assets/upload/emr').'/'.$data['file_name'].'"}';
-            exit();
-        }
-	}
-	
-	//halaman
-	public function map_from_daily(){
-		if($this->input->post()){
-			$s = $this->input->post();
-			$this->load->model('polikunjunganpasienmodel');
-			$attr_enc = $this->polikunjunganpasienmodel->find('id = "'.$s['id'].'"',null,null,null,'attr_tambahan');
-			
-			$resRaw = explode('+',$s['id_result']);
-			$kM = $resRaw[0];
-			$Id = $resRaw[1];
-			
-			$this->load->model(['medical_record/mrresultmodel','medical_record/dailynotesmodel']);
-			$d = $this->mrresultmodel->find('id = '.$Id,null,null,null,'date_format(date_created,"%Y-%m-%d") dt,json_result');
-			
-			if(!empty($attr_enc)){
-				if(isset($attr_enc[0]->attr_tambahan)){
-					$attr_dec = json_decode($attr_enc[0]->attr_tambahan,true);
-					if(isset($attr_dec['emr'])){
-						if(!in_array($Id,$attr_dec['emr'])){
-							$attr_dec['emr'][] = $Id;
-							$save_pk = true;
-						}
-					}else{
-						$attr_dec['emr'] = [];
-						$attr_dec['emr'][] = $Id;
-						$save_pk = true;
-					}
-				}
-			}else{
-				$attr_dec['emr'] = [];
-				$attr_dec['emr'][] = $Id;
-				$save_pk = true;
-			}
-			
-			
-			//remove from daily
-			$this->pop_from_daily($d[0]['dt'],$kM,$Id);
-			
-			//set PK
-			$dsPK = ['id'=>$s['id'],'attr_tambahan'=>json_encode($this->append_PK($attr_dec,$d[0]['json_result']))];
-			$this->polikunjunganpasienmodel->save($dsPK);
-			
-			echo json_encode(['status'=>'success','message'=>$s['kode_mr'].' terpilih']);
-			
-		}
-	}
 	
 	private function append_PK($Attr,$R){
 		$D = json_decode($R,TRUE);
@@ -631,49 +483,11 @@ class Fb extends Medical_record_controller {
 		return $Attr;
 	}
 	
-	private function pop_from_daily($K,$k,$iPop){
-		$this->load->model(['medical_record/dailynotesmodel']);
-		$n_dec = json_decode($this->dailynotesmodel->queryOne('id = "'.$K.'"','notes_json',null),true);
-		$mod = [];
-		$mod[$k] = array_values(array_diff( $n_dec[$k], [$iPop] ));  //n_enc
-		$mod["_".$k][] = $iPop;
-		array_walk($mod,function($v,$KEY) use (&$n_dec){
-			if(!preg_match('/^_/',$KEY))
-				$n_dec[$KEY] = $v;
-			else
-				$n_dec[$KEY] = (empty($n_dec[$KEY]))?array_unique($v):array_unique(array_merge($n_dec[$KEY], $v));
-		});
-		
-		$dsMR = ['id'=>$K,'notes_json'=>json_encode($n_dec)];
-		$this->dailynotesmodel->save($dsMR);
-		return;
-	}
-	
 	//halaman
 	function go_preview($kode,$v){
 		$this->template->write('js_bottom_scripts','<script>$(document).ready(function() {app.isSaveClicked = true; $("#content button.btn").parent("div").addClass("hide");});</script>', FALSE);
 		$this->previewVersion = $v;
 		$this->go($kode);
-	}
-	
-	//halaman
-	function change_attribute(){
-		if($this->input->post()){
-			$this->load->model(['medical_record/mrnotesmodel','pasienmodel','pendaftaranmodel']);
-			$S = $this->input->post();
-			
-			$this->pendaftaranmodel->changeResultMode('array');
-			$K = $this->pendaftaranmodel->load_data_in_right_column('',$S['_ID'],FALSE);
-			$kunj = $K[0];
-			
-			$this->pasienmodel->save(['id'=>$kunj['no_rm'],'alergi'=>$S['A']]);
-			
-			$this->mrnotesmodel->saveAppend(['detail_reg'=>$S['_ID'],'berat_badan'=>$S['B'],'tinggi_badan'=>$S['T']]);
-			
-			echo json_encode(['ok']);
-			
-		}
-		
 	}
 	
 	//halaman
