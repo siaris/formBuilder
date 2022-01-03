@@ -134,19 +134,14 @@ class Fb extends Medical_record_controller {
             ->set_status_header($status)
             ->set_output(json_encode($data));
     }
-
-	//halaman
-	public function go_m($k,$dr,$id = ''){
-		$this->isSingleThread = false;
-		$this->go($k,$dr);
-	}
 	
 	//halaman
 	public function go($kode,$detail_reg = 0,$id = 0){
 		$this->init();
-		$this->js_theme_project[] = 'vue/2.3.2';
-		$this->js_theme_project[] = 'vue/axios';
-		$this->css_theme_project[] = 'alt-aris-style';
+		$this->addJs = $this->addCss = [];
+		$this->addJs[] = 'vue/2.3.2';
+		$this->addJs[] = 'vue/axios';
+		$this->addCss[] = 'alt-aris-style';
 		$this->folder_views_gc = 'medical_record';
 		$data['view'] = 'emr';
 		$data['title'] = '';
@@ -162,9 +157,26 @@ class Fb extends Medical_record_controller {
 			$data['K'] = $K[0];
 		}
 		$this->template->write_view("js_bottom_scripts", 'medical_record/emr_js', []);
-		$this->preRender($data);
+		$this->render_defined_request($data);
 		return;
 	}
+
+	private function render_defined_request($d){
+        if ($this->input->is_ajax_request()){
+            $this->js_theme_project = $this->addJs;
+            $this->css_theme_project = $this->addCss;
+            $this->addCss();
+            $this->addJs('js');
+            $this->template->write_view("content", $this->folder_views_gc."/".$d['view'], $d);
+            $this->template->render();
+            return;
+        }
+        //merge asset
+        $this->js_theme_project = array_merge($this->js_theme_project,$this->addJs);
+        $this->css_theme_project = array_merge($this->css_theme_project,$this->addCss);
+        $this->preRender($d);
+        return;
+    }
 	
 	private function ambil_mr_latest($kode){
 		return $this->mrformmodel->find('kode = "'.$kode.'"','mr_form.id desc',1,null,'mr_form.id,title,versi,json_form');
