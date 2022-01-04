@@ -5,7 +5,7 @@ if (!defined('BASEPATH'))
 require_once "medical_record_controller.php";
 
 class Fb extends Medical_record_controller {
-	protected $allows = ['save_notes','show_notes','show_all_notes','go','add_save','upd_v_save','update_save','map_from_daily','save','load_form','change_attribute','load_form_preview'];
+	
 	public function __construct() {
         $this->trdParty = ['Date Picker'=>['css/datepicker.css','js/bootstrap-datepicker.js'],'Datetime Picker'=>['css/bootstrap-datetimepicker.css','js/bootstrap-datetimepicker.js'],
 		'Facebox'=>['css/facebox.css','js/facebox.js']];
