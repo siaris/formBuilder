@@ -182,6 +182,10 @@ class Fb extends Medical_record_controller {
 		return $this->mrformmodel->find('kode = "'.$kode.'"','mr_form.id desc',1,null,'mr_form.id,title,versi,json_form');
 	}
 
+	private function get_latest_doc_within_docs($r){
+		return (!empty($r))?$r[(count($r) - 1)]:[];
+	}
+
 	private function get_konten($p){
 		$this->load->model(['medical_record/mrresultmodel']);
 		$submit = $p; $attr_emr = $attr_dec = []; $allowed_action = 'new';
@@ -204,7 +208,8 @@ class Fb extends Medical_record_controller {
 					if(isset($attr_dec['emr'])){
 						if(!empty($attr_dec['emr'])){
 							$this->mrresultmodel->db->join('mr_form','mr_form.id=id_form','inner');
-							$result = $this->mrresultmodel->find('mr_result.id in ("'.implode('","',$attr_dec['emr']).'") and mr_form.kode = "'.$submit['kode'].'"',null,1,null,'mr_result.id id,id_form,json_result,status');
+							$rRaw = $this->mrresultmodel->find('mr_result.id in ("'.implode('","',$attr_dec['emr']).'") and mr_form.kode = "'.$submit['kode'].'"',null,null,null,'mr_result.id id,id_form,json_result,status');
+							$result = $this->get_latest_doc_within_docs($rRaw);
 							if(isset($result[0]['json_result'])){
 								$attr_emr = [$result[0]['status'],json_decode($result[0]['json_result'],true),$result[0]['id']];
 								$allowed_action = 'update';
